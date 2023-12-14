@@ -1,0 +1,332 @@
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Custom Lambdas for IAM Security
+
+Resources:
+
+  ####################### IAM User Activity Analysis and Remove Unused Permissions #######################
+
+  IAMActivityMonitorTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: IAMActivityMonitorTopic
+
+  IAMUserActivityCheckLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: IAMUserActivityCheckLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:ListUsers
+                  - iam:DeleteUserPolicy
+                  - iam:DetachUserPolicy
+                  - iam:ListGroupPolicies
+                  - iam:ListAttachedGroupPolicies
+                  - iam:ListGroupsForUser
+                  - iam:GetPolicyVersion
+                  - iam:GetPolicy
+                  - iam:ListUserPolicies
+                  - iam:ListAttachedUserPolicies
+                  - iam:GetUserPolicy
+                  - cloudtrail:LookupEvents
+                  - sns:Publish
+                Resource: '*'
+
+  IAMUserActivityCheckLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt IAMUserActivityCheckLambdaRole.Arn
+      Runtime: python3.8
+      CodeUri: lambdas/IAMUserActivityCheck/
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref IAMActivityMonitorTopic
+      Timeout: 300
+
+  IAMUserActivityCheckScheduledEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: 'rate(4 days)'
+      Targets:
+        - Arn: !GetAtt IAMUserActivityCheckLambdaFunction.Arn
+          Id: "IAMUserActivityCheckEventTarget"
+
+  IAMUserActivityCheckLambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt IAMUserActivityCheckLambdaFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: 'events.amazonaws.com'
+      SourceArn: !GetAtt IAMUserActivityCheckScheduledEventRule.Arn
+
+  IAMUserActivityCheckLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/IAMUserActivityCheck
+      RetentionInDays: 14
+
+
+
+  ##################### Access Key Management (Delete unused Access Keys and Replace with new ones) ###########################
+
+  AccessKeyManagementLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AccessKeyManagementLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:ListUsers
+                  - iam:ListAccessKeys
+                  - iam:GetAccessKeyLastUsed
+                  - iam:UpdateAccessKey
+                  - iam:DeleteAccessKey
+                  - iam:CreateAccessKey
+                  - sns:Publish
+                Resource: '*'
+
+  AccessKeyManagementLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt AccessKeyManagementLambdaRole.Arn
+      Runtime: python3.8
+      CodeUri: lambdas/AccessKeyManagement/
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref IAMActivityMonitorTopic
+      Timeout: 300
+
+  AccessKeyManagementScheduledEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: 'rate(4 days)'
+      Targets:
+        - Arn: !GetAtt AccessKeyManagementLambdaFunction.Arn
+          Id: "AccessKeyManagementEventTarget"
+
+  AccessKeyManagementLambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt AccessKeyManagementLambdaFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: 'events.amazonaws.com'
+      SourceArn: !GetAtt AccessKeyManagementScheduledEventRule.Arn
+
+  AccessKeyManagementLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/AccessKeyManagement
+      RetentionInDays: 14
+
+
+  ####################### Access Key Rotation #######################
+
+  AccessKeyRotationLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AccessKeyRotationLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:ListUsers
+                  - iam:CreateAccessKey
+                  - iam:ListAccessKeys
+                  - iam:DeleteAccessKey
+                  - iam:UpdateAccessKey
+                  - secretsmanager:CreateSecret
+                  - secretsmanager:UpdateSecret
+                  - sns:Publish
+                Resource: '*'
+
+  AccessKeyRotationLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt AccessKeyRotationLambdaExecutionRole.Arn
+      Runtime: python3.8
+      CodeUri: lambdas/AccessKeyRotation/
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref IAMActivityMonitorTopic
+      Timeout: 300
+
+  AccessKeyRotationScheduledEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: 'rate(4 days)'
+      Targets:
+        - Arn: !GetAtt AccessKeyRotationLambdaFunction.Arn
+          Id: "AccessKeyRotationEventTarget"
+
+  AccessKeyRotationLambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt AccessKeyRotationLambdaFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: 'events.amazonaws.com'
+      SourceArn: !GetAtt AccessKeyRotationScheduledEventRule.Arn
+
+  AccessKeyRotationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/AccessKeyRotation
+      RetentionInDays: 14
+
+
+  ####################### Empty IAM Group Deletion #######################
+
+  EmptyGroupDeletionLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: EmptyGroupDeletionLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:ListGroups
+                  - iam:GetGroup
+                  - iam:DeleteGroup
+                  - iam:DetachGroupPolicy
+                  - iam:ListAttachedGroupPolicies
+                  - sns:Publish
+                Resource: '*'
+
+  EmptyGroupDeletionLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt EmptyGroupDeletionLambdaRole.Arn
+      Runtime: python3.8
+      CodeUri: lambdas/EmptyGroupDeletion/
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref IAMActivityMonitorTopic
+      Timeout: 300
+
+  EmptyGroupDeletionScheduledEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: 'rate(6 hours)'
+      Targets:
+        - Arn: !GetAtt EmptyGroupDeletionLambdaFunction.Arn
+          Id: "EmptyGroupDeletionEventTarget"
+
+  EmptyGroupDeletionLambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt EmptyGroupDeletionLambdaFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: 'events.amazonaws.com'
+      SourceArn: !GetAtt EmptyGroupDeletionScheduledEventRule.Arn
+
+  EmptyGroupDeletionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/EmptyGroupDeletion
+      RetentionInDays: 14
+
+
+  #################### IAM User Console Access Management #####################
+
+  IAMUserConsoleAccessCheckLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: IAMUserConsoleAccessCheckLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:ListUsers
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:PutSecretValue
+                  - secretsmanager:CreateSecret
+                  - iam:GetUser
+                  - iam:DeleteLoginProfile
+                  - iam:UpdateLoginProfile
+                  - sns:Publish
+                Resource: '*'
+
+  IAMUserConsoleAccessCheckLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt IAMUserConsoleAccessCheckLambdaRole.Arn
+      Runtime: python3.8
+      CodeUri: lambdas/IAMUserConsoleAccessCheck/
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref IAMActivityMonitorTopic
+      Timeout: 300
+
+  IAMUserConsoleAccessCheckScheduledEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: 'rate(5 days)'
+      Targets:
+        - Arn: !GetAtt IAMUserConsoleAccessCheckLambdaFunction.Arn
+          Id: "IAMUserConsoleAccessCheckEventTarget"
+
+  IAMUserConsoleAccessCheckLambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt IAMUserConsoleAccessCheckLambdaFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: 'events.amazonaws.com'
+      SourceArn: !GetAtt IAMUserConsoleAccessCheckScheduledEventRule.Arn
+
+  IAMUserConsoleAccessCheckLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/IAMUserConsoleAccessCheck
+      RetentionInDays: 14
