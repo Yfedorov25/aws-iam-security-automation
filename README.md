@@ -30,7 +30,7 @@ To deploy these solutions:
 
 ### IAM User Activity Analysis and Removal of Unused Permissions
 
-**Purpose:** Analyzes IAM user activity to identify and remove permissions that are not being used.
+**Purpose:** Analyzes IAM user activity to identify permissions that are not being used.
 
 **Features:**
 - Scans IAM user activities and permissions.
@@ -48,7 +48,7 @@ To deploy these solutions:
 - Checks for access keys that haven't been used recently.
 - Deletes old access keys and issues new ones as necessary.
 
-**Use Case:** Ideal for organizations looking to automate the rotation and management of IAM access keys.
+**Use Case:** Suitable for companies with stringent security policies that mandate frequent key rotation for enhanced protection against credential compromise.
 
 ### Access Key Rotation
 
@@ -59,7 +59,7 @@ To deploy these solutions:
 - Creates new access keys and updates them in AWS Secrets Manager.
 - Notifies via SNS about the rotation for user action.
 
-**Use Case:** Suitable for enforcing a routine access key rotation policy.
+**Use Case:** Crucial for organizations where IAM users access AWS services programmatically, maintaining key freshness and security integrity.
 
 ### Empty IAM Group Deletion
 
@@ -70,7 +70,7 @@ To deploy these solutions:
 - Removes empty groups to declutter the IAM space.
 - Sends notifications upon deletion of any groups.
 
-**Use Case:** Helps maintain an organized and efficient IAM structure.
+**Use Case:** Helps maintain an organized and efficient IAM structure, by removing unused IAM Groups.
 
 ### IAM User Console Access Management
 
