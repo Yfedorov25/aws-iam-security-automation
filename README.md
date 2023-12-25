@@ -84,4 +84,4 @@ To deploy these solutions:
 **Use Case:** Essential for organizations that need to control and audit console access within their AWS environment.
 
 ## Contributing
-We welcome contributions to this repository. Please read the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to submit contributions.
+I welcome contributions to this repository. If you have suggestions or improvements, please submit a pull request or open an issue.

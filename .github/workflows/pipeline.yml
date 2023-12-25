@@ -1,0 +1,54 @@
+name: Deploy Cloudformation Template
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  STACK_NAME: aws-iam-security-automation
+  S3_BUCKET_NAME: aws-iam-security-automation-bucket
+  AWS_DEFAULT_REGION: eu-central-1 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: develop
+    services:
+      docker:
+        image: docker:19.03.12
+        options: --privileged
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+
+    - name: Install SAM CLI
+      run: pip install aws-sam-cli
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+
+    - name: SAM Build
+      run: sam build --debug
+      working-directory: ./cloudformation
+
+    - name: Change Directory
+      run: cd .aws-sam/build
+      working-directory: ./cloudformation
+
+    - name: List Directory Contents
+      run: ls -l
+
+    - name: SAM Deploy
+      run: |
+        sam deploy --stack-name ${{ env.STACK_NAME }} --region ${{ env.AWS_DEFAULT_REGION }} --template-file .aws-sam/build/template.yaml --capabilities CAPABILITY_IAM --no-confirm-changeset --resolve-s3
+      working-directory: ./cloudformation
