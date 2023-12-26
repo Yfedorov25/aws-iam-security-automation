@@ -6,9 +6,10 @@ This repository contains a collection of AWS CloudFormation templates and Lambda
 ## Table of Contents
 - [Solutions Overview](#solutions-overview)
 - [Usage Instructions](#usage-instructions)
+- [Deployment Instructions](#deployment-instructions)
 - [Solutions Description](#solutions-description)
 - [Contributing](#contributing)
-- [License](#license)
+
 
 ## Solutions Overview
 The `aws-iam-security-automation` repository includes the following solutions:
@@ -25,6 +26,22 @@ To deploy these solutions:
 1. Navigate to the desired solution's folder.
 2. Review and update the CloudFormation template and Lambda function as needed.
 3. Deploy the template using the AWS Management Console, AWS CLI, or your preferred deployment tool.
+
+## Deployment Instructions
+
+This repository is configured with a GitHub Actions workflow to automate the deployment of solutions. To trigger the deployment:
+
+1. Ensure that the `STACK_NAME`, `S3_BUCKET_NAME`, and `AWS_DEFAULT_REGION` environment variables are correctly set in the GitHub Actions workflow file.
+2. Make any necessary changes to the CloudFormation templates or Lambda functions and push these changes to the `main` branch.
+3. The push to `main` will automatically trigger the GitHub Actions workflow, which will:
+    - Check out the code.
+    - Set up Python 3.8.
+    - Install the AWS SAM CLI.
+    - Configure AWS credentials using secrets stored in the GitHub repository.
+    - Build the SAM application.
+    - Deploy the application using SAM, creating or updating the specified CloudFormation stack.
+
+To monitor the deployment process, check the Actions tab in the GitHub repository after pushing changes.
 
 ## Solutions Description
 
