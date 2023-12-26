@@ -29,19 +29,31 @@ To deploy these solutions:
 
 ## Deployment Instructions
 
-This repository is configured with a GitHub Actions workflow to automate the deployment of solutions. To trigger the deployment:
+This repository is configured with a GitHub Actions workflow to automate the deployment of solutions. To utilize this automated deployment:
 
-1. Ensure that the `STACK_NAME`, `S3_BUCKET_NAME`, and `AWS_DEFAULT_REGION` environment variables are correctly set in the GitHub Actions workflow file.
-2. Make any necessary changes to the CloudFormation templates or Lambda functions and push these changes to the `main` branch.
-3. The push to `main` will automatically trigger the GitHub Actions workflow, which will:
-    - Check out the code.
-    - Set up Python 3.8.
-    - Install the AWS SAM CLI.
-    - Configure AWS credentials using secrets stored in the GitHub repository.
-    - Build the SAM application.
-    - Deploy the application using SAM, creating or updating the specified CloudFormation stack.
+1. **Configure GitHub Secrets**:
+    - Go to your GitHub repository's settings.
+    - Access the "Secrets" section.
+    - Add the following secrets for secure AWS access:
+        - `AWS_ACCESS_KEY_ID`: Your AWS access key ID.
+        - `AWS_SECRET_ACCESS_KEY`: Your AWS secret access key.
+    Ensure these credentials have the necessary permissions to deploy the CloudFormation templates.
 
-To monitor the deployment process, check the Actions tab in the GitHub repository after pushing changes.
+2. **Set Environment Variables**:
+    - Confirm that the `STACK_NAME`, `S3_BUCKET_NAME`, and `AWS_DEFAULT_REGION` environment variables are appropriately set in the GitHub Actions workflow file.
+
+3. **Triggering the Deployment**:
+    - Make required changes to the CloudFormation templates or Lambda functions and commit these changes to the `main` branch.
+    - This action will trigger the GitHub Actions workflow, which performs the following tasks:
+        - Checks out the repository.
+        - Sets up Python 3.8.
+        - Installs the AWS SAM CLI.
+        - Configures AWS credentials using the provided secrets.
+        - Builds the SAM application in the `./cloudformation` directory.
+        - Deploys the application using SAM to create or update the specified CloudFormation stack.
+
+4. **Monitoring the Deployment**:
+    - Monitor the deployment process via the Actions tab in the GitHub repository following your push to `main`.
 
 ## Solutions Description
 
